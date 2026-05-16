@@ -11,6 +11,7 @@ import {
 	usePandaTvTranslations,
 } from "@/src/app/hooks/translations/pandatv-translations"
 import { useWeiboTranslations } from "@/src/app/hooks/translations/weibo-translations"
+import { useBilibiliTranslations } from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
 
 type PlatformFormSuspenseProps = {
 	configPromise: Promise<GlobalConfig>
@@ -33,6 +34,7 @@ export function PlatformFormWrapper({ configPromise }: PlatformFormSuspenseProps
 	const pandaQualityOptions = usePandaTvQualityTranslations()
 
 	const weiboT = useWeiboTranslations()
+	const bilibiliT = useBilibiliTranslations()
 
 	const settingsT = useTranslations("SettingsPage")
 	return (
@@ -49,6 +51,7 @@ export function PlatformFormWrapper({ configPromise }: PlatformFormSuspenseProps
 				pandaStrings={pandaT}
 				pandaQualityOptions={pandaQualityOptions}
 				weiboStrings={weiboT}
+				bilibiliStrings={bilibiliT}
 				save={settingsT("save")}
 			/>
 		</>

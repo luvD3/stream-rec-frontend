@@ -21,6 +21,8 @@ import { DouyinQuality, DouyinTabString } from "@/src/app/hooks/translations/dou
 import { DouyuQuality, DouyuTabString } from "@/src/app/hooks/translations/douyu-translations"
 import { TwitchQualityItem, TwitchTabString } from "@/src/app/hooks/translations/twitch-translations"
 import { PandaTvQualityItem, PandaTvTabString } from "@/src/app/hooks/translations/pandatv-translations"
+import { BilibiliTabString } from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
+import { BilibiliTabContent } from "@/src/app/[locale]/(feat)/settings/platform/tabs/bilibili-tab"
 
 export type PlatformFormValues = {
 	defaultValues: GlobalConfig
@@ -35,6 +37,7 @@ export type PlatformFormValues = {
 	pandaStrings: PandaTvTabString
 	pandaQualityOptions: PandaTvQualityItem[]
 	weiboStrings: WeiboTabString
+	bilibiliStrings: BilibiliTabString
 }
 
 export default function PlatformForm({
@@ -50,6 +53,7 @@ export default function PlatformForm({
 	pandaStrings,
 	pandaQualityOptions,
 	weiboStrings,
+	bilibiliStrings,
 }: PlatformFormValues) {
 	const form = useForm<GlobalConfig>({
 		resolver: zodResolver(globalConfigSchema),
@@ -94,6 +98,9 @@ export default function PlatformForm({
 						</TabsTrigger>
 						<TabsTrigger value={PlatformType.WEIBO} className='text-zinc-600 dark:text-zinc-200'>
 							{weiboStrings.platform}
+						</TabsTrigger>
+						<TabsTrigger value={PlatformType.BILIBILI} className='text-zinc-600 dark:text-zinc-200'>
+							{bilibiliStrings.platform}
 						</TabsTrigger>
 					</TabsList>
 
@@ -171,6 +178,17 @@ export default function PlatformForm({
 								showFetchDelay
 								showDownloadCheckInterval={true}
 								strings={weiboStrings}
+							/>
+						</TabsContent>
+						<TabsContent value={PlatformType.BILIBILI}>
+							<BilibiliTabContent
+								controlPrefix={"bilibiliConfig"}
+								control={form.control}
+								showCookies
+								showPartedDownloadRetry
+								showFetchDelay
+								showDownloadCheckInterval={true}
+								strings={bilibiliStrings}
 							/>
 						</TabsContent>
 					</div>

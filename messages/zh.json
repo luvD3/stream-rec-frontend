@@ -353,6 +353,13 @@
 		"sourceFormatPlaceholder": "请选择一个源格式",
 		"cookieDescription": "请直接复制粘贴，无效cookies将自动剔除，非必填。"
 	},
+	"Bilibili": {
+		"platform": "Bilibili",
+		"sourceFormat": "源格式 (实验性）",
+		"sourceFormatDescription": "选择一个 Bilibili 源格式，默认为 flv。Bilibili v1 会录制平台返回的最高可用流，不提供画质选择。",
+		"sourceFormatPlaceholder": "请选择一个源格式",
+		"cookieDescription": "请直接复制粘贴，无效 cookies 将自动剔除，非必填。"
+	},
 	"BaseDownloadConfigs": {
 		"danmu": "下载弹幕",
 		"danmuDescription": "是否下载弹幕，默认跟随全局设置。",

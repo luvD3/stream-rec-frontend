@@ -5,6 +5,7 @@ import { huyaGlobalConfig } from "@/src/lib/data/platform/huya/definitions"
 import { douyinGlobalConfig } from "@/src/lib/data/platform/douyin/definitions"
 import { pandaTvGlobalConfig } from "@/src/lib/data/platform/pandatv/definitions"
 import { weiboGlobalConfig } from "@/src/lib/data/platform/weibo/definitions"
+import { bilibiliGlobalConfig } from "@/src/lib/data/platform/bilibili/definitions"
 import { engineConfigSchema } from "../engines/definitions"
 
 export const globalConfigSchema = z.object({
@@ -44,6 +45,7 @@ export const globalConfigSchema = z.object({
 	twitchConfig: twitchGlobalConfig.optional(),
 	pandaTvConfig: pandaTvGlobalConfig.optional(),
 	weiboConfig: weiboGlobalConfig.optional(),
+	bilibiliConfig: bilibiliGlobalConfig.optional(),
 	tlsVerification: z.boolean().default(true),
 })
 
