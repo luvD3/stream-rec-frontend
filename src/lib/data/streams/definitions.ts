@@ -12,6 +12,7 @@ import { douyinRegex } from "@/src/lib/data/platform/douyin/constants"
 import { douyuRegex } from "@/src/lib/data/platform/douyu/constants"
 import { pandatvRegex } from "@/src/lib/data/platform/pandatv/constants"
 import { weiboRegex } from "@/src/lib/data/platform/weibo/constants"
+import { bilibiliRegex } from "@/src/lib/data/platform/bilibili/constants"
 import { engineConfigSchema } from "../engines/definitions"
 
 export const videoFormats = ["mp4", "avi", "mov", "mkv", "flv", "ts"] as const
@@ -76,7 +77,7 @@ export const streamerSchema = z.object({
 		.min(1)
 		.refine(
 			url => {
-				const regexps = [huyaRegex, douyinRegex, douyuRegex, twitchRegex, pandatvRegex, weiboRegex]
+				const regexps = [huyaRegex, douyinRegex, douyuRegex, twitchRegex, pandatvRegex, weiboRegex, bilibiliRegex]
 				return regexps.some(regex => new RegExp(regex).test(url))
 			},
 			{
