@@ -8,6 +8,7 @@ import { usePandaTvQualityTranslations, usePandaTvTranslations } from "../../../
 import { useEngineTranslations } from "../../../../hooks/translations/engine-translations"
 import { useHuyaTranslations } from "../../../../hooks/translations/huya-translations"
 import { useWeiboTranslations } from "../../../../hooks/translations/weibo-translations"
+import { useBilibiliTranslations } from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
 
 export const useStreamerFormTranslations = () => {
 	const t = useTranslations("streamer.form")
@@ -32,6 +33,7 @@ export const useStreamerFormTranslations = () => {
 	const pandaT = usePandaTvTranslations()
 	const pandaQualityOptions = usePandaTvQualityTranslations()
 	const weiboT = useWeiboTranslations()
+	const bilibiliT = useBilibiliTranslations()
 
 	const engineTranslations = useEngineTranslations()
 
@@ -193,6 +195,7 @@ export const useStreamerFormTranslations = () => {
 			pandatv: pandaT,
 			pandatvQuality: pandaQualityOptions,
 			weibo: weiboT,
+			bilibili: bilibiliT,
 			base: baseDownloadStrings,
 		},
 		actions: actionTabStrings,

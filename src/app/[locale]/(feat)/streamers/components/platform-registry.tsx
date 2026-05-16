@@ -40,6 +40,12 @@ const WeiboPlatformForm = lazy(() =>
 	}))
 )
 
+const BilibiliPlatformForm = lazy(() =>
+	import("@/src/app/[locale]/(feat)/streamers/components/platforms/bilibili-platform").then(mod => ({
+		default: mod.BilibiliPlatformForm,
+	}))
+)
+
 // Loading fallback
 const PlatformLoading = () => <LoadingSkeleton />
 
@@ -99,6 +105,13 @@ export const platformRegistry: Record<string, PlatformRegistryItem> = {
 		component: WeiboPlatformForm,
 		getProps: props => ({
 			strings: props.strings.weibo,
+			allowNone: props.allowNone,
+		}),
+	},
+	[PlatformType.BILIBILI]: {
+		component: BilibiliPlatformForm,
+		getProps: props => ({
+			strings: props.strings.bilibili,
 			allowNone: props.allowNone,
 		}),
 	},

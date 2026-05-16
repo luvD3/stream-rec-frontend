@@ -40,6 +40,7 @@ import { twitchDownloadConfig } from "@/src/lib/data/platform/twitch/definitions
 import { pandaTvDownloadConfig } from "@/src/lib/data/platform/pandatv/definitions"
 import { FlagFormField } from "@/src/app/[locale]/(feat)/settings/components/form/flag-form-field"
 import { weiboDownloadConfig } from "@/src/lib/data/platform/weibo/definitions"
+import { bilibiliDownloadConfig } from "@/src/lib/data/platform/bilibili/definitions"
 import EngineSelector from "../../settings/components/form/engine-selector"
 import { DownloadEngineSchema, engineConfigSchema } from "@/src/lib/data/engines/definitions"
 import { TimeSelector } from "./time-selector"
@@ -89,6 +90,7 @@ export function StreamerForm({ defaultValues, templateUsers, onSubmit }: Streame
 			[PlatformType.TWITCH]: twitchDownloadConfig,
 			[PlatformType.PANDATV]: pandaTvDownloadConfig,
 			[PlatformType.WEIBO]: weiboDownloadConfig,
+			[PlatformType.BILIBILI]: bilibiliDownloadConfig,
 			[PlatformType.TEMPLATE]: streamerSchema.pick({ downloadConfig: true }),
 		}
 
