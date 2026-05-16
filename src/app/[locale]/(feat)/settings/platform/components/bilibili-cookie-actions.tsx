@@ -7,13 +7,11 @@ import { Button } from "@/src/components/new-york/ui/button"
 import { LoadingButton } from "@/src/components/new-york/ui/loading-button"
 import { Badge } from "@/src/components/new-york/ui/badge"
 import { cn } from "@/src/lib/utils"
-import {
-	BILIBILI_LOGIN_URL,
-	BilibiliCookieVerificationResult,
-	verifyBilibiliCookie,
-} from "@/src/lib/data/platform/bilibili/apis"
+import { verifyBilibiliCookie } from "@/src/lib/data/platform/bilibili/apis"
+import { BILIBILI_LOGIN_URL } from "@/src/lib/data/platform/bilibili/constants"
+import { BilibiliCookieVerificationResult } from "@/src/lib/data/platform/bilibili/definitions"
 
-type BilibiliCookieActionsStrings = {
+export type BilibiliCookieActionsStrings = {
 	openLogin: string
 	verifyCookie: string
 	clearCookie: string

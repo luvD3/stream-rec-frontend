@@ -358,7 +358,20 @@
 		"sourceFormat": "源格式 (实验性）",
 		"sourceFormatDescription": "选择一个 Bilibili 源格式，默认为 flv。Bilibili v1 会录制平台返回的最高可用流，不提供画质选择。",
 		"sourceFormatPlaceholder": "请选择一个源格式",
-		"cookieDescription": "请直接复制粘贴，无效 cookies 将自动剔除，非必填。"
+		"cookieDescription": "请直接复制粘贴，无效 cookies 将自动剔除，非必填。",
+		"cookieActions": {
+			"openLogin": "打开 Bilibili 登录页",
+			"verifyCookie": "验证 Cookie",
+			"clearCookie": "清除 Cookie",
+			"cookieRequired": "请先粘贴 Bilibili Cookie 再验证。",
+			"clearSuccess": "已清除 Bilibili Cookie。",
+			"verifySuccess": "Bilibili Cookie 验证通过。",
+			"verifyFailed": "Bilibili Cookie 不是登录态。",
+			"loggedIn": "已登录",
+			"notLoggedIn": "未登录",
+			"qualityPrefix": "最高画质",
+			"offline": "直播间未开播"
+		}
 	},
 	"BaseDownloadConfigs": {
 		"danmu": "下载弹幕",

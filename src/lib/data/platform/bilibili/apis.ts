@@ -2,33 +2,13 @@
 
 import { fetchApi } from "@/src/lib/data/api"
 import { z } from "zod"
-
-export const BILIBILI_LOGIN_URL = "https://passport.bilibili.com/login"
-
-const bilibiliQualitySchema = z.object({
-	qn: z.number(),
-	description: z.string().nullish(),
-})
-
-export const bilibiliCookieVerificationResultSchema = z.object({
-	valid: z.boolean(),
-	loggedIn: z.boolean(),
-	userId: z.number().nullish(),
-	userName: z.string().nullish(),
-	roomId: z.number().nullish(),
-	live: z.boolean().nullish(),
-	highestQuality: bilibiliQualitySchema.nullish(),
-	availableQualities: z.array(bilibiliQualitySchema).default([]),
-	message: z.string().nullish(),
-})
+import { bilibiliCookieVerificationResultSchema } from "@/src/lib/data/platform/bilibili/definitions"
 
 const bilibiliCookieVerificationApiResponseSchema = z.object({
 	code: z.number(),
 	msg: z.string(),
 	data: bilibiliCookieVerificationResultSchema.optional(),
 })
-
-export type BilibiliCookieVerificationResult = z.infer<typeof bilibiliCookieVerificationResultSchema>
 
 export type BilibiliCookieVerificationInput = {
 	cookie: string
