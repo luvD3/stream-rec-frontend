@@ -21,7 +21,10 @@ import { DouyinQuality, DouyinTabString } from "@/src/app/hooks/translations/dou
 import { DouyuQuality, DouyuTabString } from "@/src/app/hooks/translations/douyu-translations"
 import { TwitchQualityItem, TwitchTabString } from "@/src/app/hooks/translations/twitch-translations"
 import { PandaTvQualityItem, PandaTvTabString } from "@/src/app/hooks/translations/pandatv-translations"
-import { BilibiliTabString } from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
+import {
+	BilibiliQualityItem,
+	BilibiliTabString,
+} from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
 import { BilibiliTabContent } from "@/src/app/[locale]/(feat)/settings/platform/tabs/bilibili-tab"
 
 export type PlatformFormValues = {
@@ -38,6 +41,7 @@ export type PlatformFormValues = {
 	pandaQualityOptions: PandaTvQualityItem[]
 	weiboStrings: WeiboTabString
 	bilibiliStrings: BilibiliTabString
+	bilibiliQualityOptions: BilibiliQualityItem[]
 }
 
 export default function PlatformForm({
@@ -54,6 +58,7 @@ export default function PlatformForm({
 	pandaQualityOptions,
 	weiboStrings,
 	bilibiliStrings,
+	bilibiliQualityOptions,
 }: PlatformFormValues) {
 	const form = useForm<GlobalConfig>({
 		resolver: zodResolver(globalConfigSchema),
@@ -189,6 +194,7 @@ export default function PlatformForm({
 								showFetchDelay
 								showDownloadCheckInterval={true}
 								strings={bilibiliStrings}
+								qualityOptions={bilibiliQualityOptions}
 							/>
 						</TabsContent>
 					</div>

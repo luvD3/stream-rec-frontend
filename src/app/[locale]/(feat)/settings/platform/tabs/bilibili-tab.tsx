@@ -8,12 +8,16 @@ import {
 	PlatformTabContentProps,
 } from "@/src/app/[locale]/(feat)/settings/platform/tabs/common-platform-tab"
 import { Badge } from "@/src/components/new-york/ui/badge"
-import { BilibiliTabString } from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
+import {
+	BilibiliQualityItem,
+	BilibiliTabString,
+} from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
 import { CookiesFormfield } from "@/src/app/[locale]/(feat)/settings/components/form/cookies-formfield"
 import { BilibiliCookieActions } from "@/src/app/[locale]/(feat)/settings/platform/components/bilibili-cookie-actions"
 
 type BilibiliConfigProps = {
 	allowNone?: boolean
+	qualityOptions?: BilibiliQualityItem[]
 } & PlatformTabContentProps<BilibiliTabString>
 
 export const BilibiliTabContent = ({
@@ -24,6 +28,7 @@ export const BilibiliTabContent = ({
 	showPartedDownloadRetry,
 	showDownloadCheckInterval,
 	allowNone = false,
+	qualityOptions,
 	strings,
 }: BilibiliConfigProps) => {
 	const form = useFormContext()
@@ -50,6 +55,31 @@ export const BilibiliTabContent = ({
 				showFetchDelay={showFetchDelay}
 				showDownloadCheckInterval={showDownloadCheckInterval}
 			>
+				{qualityOptions && (
+					<FormField
+						control={control}
+						name={controlPrefix ? `${controlPrefix}.quality` : "quality"}
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>{strings.quality}</FormLabel>
+								<Select
+									onValueChange={value => field.onChange(value == null ? null : parseInt(value, 10))}
+									defaultValue={field.value?.toString()}
+									placeholder={strings.qualityDefault}
+									options={qualityOptions.map(quality => (
+										<SelectItem key={quality.quality} value={quality.quality}>
+											{quality.description}
+										</SelectItem>
+									))}
+									allowNone
+								/>
+								<FormDescription>{strings.qualityDescription}</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				)}
+
 				<FormField
 					control={control}
 					name={controlPrefix ? `${controlPrefix}.sourceFormat` : "sourceFormat"}

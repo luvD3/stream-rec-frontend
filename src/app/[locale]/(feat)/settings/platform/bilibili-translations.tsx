@@ -5,7 +5,17 @@ import { useBaseGlobalPlatformTranslations } from "@/src/app/hooks/translations/
 import RichText from "@/src/components/i18n/RichText"
 import { BilibiliCookieActionsStrings } from "@/src/app/[locale]/(feat)/settings/platform/components/bilibili-cookie-actions"
 
+const bilibiliQualityKeys = ["dolby", "p4k", "p2k", "origin", "blue", "super", "high", "smooth"] as const
+
+export type BilibiliQualityItem = {
+	quality: string
+	description: string
+}
+
 export type BilibiliTabString = {
+	quality: string
+	qualityDescription: string
+	qualityDefault: string
 	sourceFormat: string
 	sourceFormatPlaceholder: string
 	sourceFormatDescription: string | Readonly<React.ReactNode>
@@ -21,6 +31,9 @@ export const useBilibiliTranslations = () => {
 			({
 				...baseTranslations,
 				platform: t("platform"),
+				quality: t("quality"),
+				qualityDescription: t("qualityDescription"),
+				qualityDefault: t("qualityDefault"),
 				sourceFormat: t("sourceFormat"),
 				sourceFormatPlaceholder: t("sourceFormatPlaceholder"),
 				sourceFormatDescription: <RichText>{tags => t.rich("sourceFormatDescription", tags)}</RichText>,
@@ -40,5 +53,17 @@ export const useBilibiliTranslations = () => {
 				},
 			}) as BilibiliTabString,
 		[t, baseTranslations]
+	)
+}
+
+export const useBilibiliQualityTranslations = () => {
+	const t = useTranslations("BilibiliQualities")
+	return useMemo(
+		() =>
+			bilibiliQualityKeys.map(key => ({
+				quality: t(`${key}.id`),
+				description: t(`${key}.name`),
+			})),
+		[t]
 	)
 }

@@ -355,8 +355,11 @@
 	},
 	"Bilibili": {
 		"platform": "Bilibili",
+		"quality": "优先录制画质",
+		"qualityDescription": "选择一个画质，工具将会尝试录制低于等于这个画质的流。",
+		"qualityDefault": "自动最高",
 		"sourceFormat": "源格式 (实验性）",
-		"sourceFormatDescription": "选择一个 Bilibili 源格式，默认为 flv。Bilibili v1 会录制平台返回的最高可用流，不提供画质选择。",
+		"sourceFormatDescription": "选择一个 Bilibili 源格式，默认为 flv。",
 		"sourceFormatPlaceholder": "请选择一个源格式",
 		"cookieDescription": "请直接复制粘贴，无效 cookies 将自动剔除，非必填。",
 		"cookieActions": {
@@ -371,6 +374,40 @@
 			"notLoggedIn": "未登录",
 			"qualityPrefix": "最高画质",
 			"offline": "直播间未开播"
+		}
+	},
+	"BilibiliQualities": {
+		"dolby": {
+			"id": "30000",
+			"name": "杜比"
+		},
+		"p4k": {
+			"id": "20000",
+			"name": "4K"
+		},
+		"p2k": {
+			"id": "15000",
+			"name": "2K"
+		},
+		"origin": {
+			"id": "10000",
+			"name": "原画"
+		},
+		"blue": {
+			"id": "400",
+			"name": "蓝光"
+		},
+		"super": {
+			"id": "250",
+			"name": "超清"
+		},
+		"high": {
+			"id": "150",
+			"name": "高清"
+		},
+		"smooth": {
+			"id": "80",
+			"name": "流畅"
 		}
 	},
 	"BaseDownloadConfigs": {

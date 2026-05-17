@@ -45,22 +45,25 @@ describe("Bilibili platform form contract", () => {
 		expect(streamer.success).toBe(true)
 	})
 
-	it("models Bilibili settings without a user-selectable quality field", async () => {
+	it("models Bilibili global quality while keeping streamer quality hidden", async () => {
 		const { bilibiliDownloadConfig, bilibiliGlobalConfig } = await importBilibiliDefinitions()
 
-		expect(bilibiliGlobalConfig.safeParse({ sourceFormat: "flv", cookies: "SESSDATA=fixture;" }).success).toBe(true)
+		expect(bilibiliGlobalConfig.safeParse({ sourceFormat: "flv", quality: 10000, cookies: "SESSDATA=fixture;" }).success).toBe(true)
 		expect(bilibiliGlobalConfig.safeParse({ sourceFormat: "hls", cookies: null }).success).toBe(true)
+		expect(bilibiliGlobalConfig.safeParse({ sourceFormat: "flv", quality: null }).success).toBe(true)
 		expect(bilibiliGlobalConfig.safeParse({ sourceFormat: "mp4" }).success).toBe(false)
-		expect(globalConfigSchema.safeParse({ id: 1, engine: "default", minPartSize: 0, maxPartSize: 0, bilibiliConfig: { sourceFormat: "flv" } }).success).toBe(true)
+		expect(bilibiliGlobalConfig.safeParse({ quality: 99999 }).success).toBe(false)
+		expect(globalConfigSchema.safeParse({ id: 1, engine: "default", minPartSize: 0, maxPartSize: 0, bilibiliConfig: { sourceFormat: "flv", quality: 10000 } }).success).toBe(true)
 
 		const shape = bilibiliDownloadConfig.shape as Record<string, unknown>
 		expect(shape.sourceFormat).toBeDefined()
 		expect(shape.cookies).toBeDefined()
-		expect(shape.quality).toBeUndefined()
+		expect(shape.quality).toBeDefined()
 	})
 
-	it("wires the Bilibili settings tab with cookies and source format controls", () => {
+	it("wires the Bilibili settings tab with global quality, cookies, and source format controls", () => {
 		const platformForm = readSource("src/app/[locale]/(feat)/settings/platform/platform-form.tsx")
+		const platformFormWrapper = readSource("src/app/[locale]/(feat)/settings/platform/platform-form-wrapper.tsx")
 		const bilibiliTab = readSource("src/app/[locale]/(feat)/settings/platform/tabs/bilibili-tab.tsx")
 
 		expect(platformForm).toContain("PlatformType.BILIBILI")
@@ -68,10 +71,14 @@ describe("Bilibili platform form contract", () => {
 		expect(platformForm).toContain('controlPrefix={"bilibiliConfig"}')
 		expect(platformForm).toContain("showCookies")
 		expect(platformForm).toContain("showDownloadCheckInterval")
+		expect(platformForm).toContain("qualityOptions={bilibiliQualityOptions}")
+		expect(platformFormWrapper).toContain("useBilibiliQualityTranslations")
 		expect(platformForm).toContain("disabled={!isValid}")
+		expect(bilibiliTab).toContain("qualityOptions &&")
+		expect(bilibiliTab).toContain(".quality")
+		expect(bilibiliTab).toContain("parseInt(value, 10)")
 		expect(bilibiliTab).toContain("sourceFormat")
 		expect(bilibiliTab).toContain('options={["flv", "hls"].map(format => (')
-		expect(bilibiliTab).not.toContain("qualityOptions")
 	})
 
 	it("registers Bilibili streamer platform options", () => {
@@ -85,6 +92,7 @@ describe("Bilibili platform form contract", () => {
 		expect(bilibiliPlatform).toContain('controlPrefix={"downloadConfig"}')
 		expect(bilibiliPlatform).toContain("showCookies")
 		expect(bilibiliPlatform).toContain("showDownloadCheckInterval")
+		expect(bilibiliPlatform).not.toContain("qualityOptions")
 	})
 
 	it("keeps Cookie controls manual and read-only-verification friendly", () => {
@@ -103,7 +111,8 @@ describe("Bilibili platform form contract", () => {
 		expect(cookieApi).toContain("/platforms/bilibili/cookie/verify")
 		expect(cookiesField).toContain("extractCookies")
 		expect(cookiesField).toContain("field.onChange(cookieString)")
-		expect(`${bilibiliPlatform}\n${bilibiliTab}\n${cookieActions}`).not.toMatch(/webview|auto.?import|qualityOptions/i)
+		expect(`${bilibiliPlatform}\n${cookieActions}`).not.toMatch(/webview|auto.?import|qualityOptions/i)
+		expect(bilibiliTab).not.toMatch(/webview|auto.?import/i)
 		expect(cookieApi).not.toMatch(/updateConfig|revalidateTag/)
 		expect(cookiesField).not.toMatch(/fetch\(|updateConfig|persist/i)
 	})
