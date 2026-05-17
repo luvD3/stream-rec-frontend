@@ -361,6 +361,63 @@
 		"sourceFormatPlaceholder": "Please select a source format",
 		"cookieDescription": "Please copy and paste, invalid cookies will be discarded automatically. Optional."
 	},
+	"Bilibili": {
+		"platform": "Bilibili",
+		"quality": "Preferred record quality",
+		"qualityDescription": "Select a quality. The tool will try to record the highest stream at or below that quality.",
+		"qualityDefault": "Auto highest",
+		"sourceFormat": "Source format",
+		"sourceFormatDescription": "Select the source format of the Bilibili live stream. Default is set to flv.",
+		"sourceFormatPlaceholder": "Please select a source format",
+		"cookieDescription": "Please copy and paste, invalid cookies will be discarded automatically. Optional.",
+		"cookieActions": {
+			"openLogin": "Open Bilibili login",
+			"verifyCookie": "Verify Cookie",
+			"clearCookie": "Clear Cookie",
+			"cookieRequired": "Paste a Bilibili Cookie before verification.",
+			"clearSuccess": "Bilibili Cookie cleared.",
+			"verifySuccess": "Bilibili Cookie verified.",
+			"verifyFailed": "Bilibili Cookie is not logged in.",
+			"loggedIn": "Logged in",
+			"notLoggedIn": "Not logged in",
+			"qualityPrefix": "Highest",
+			"offline": "Room offline"
+		}
+	},
+	"BilibiliQualities": {
+		"dolby": {
+			"id": "30000",
+			"name": "Dolby"
+		},
+		"p4k": {
+			"id": "20000",
+			"name": "4K"
+		},
+		"p2k": {
+			"id": "15000",
+			"name": "2K"
+		},
+		"origin": {
+			"id": "10000",
+			"name": "Original"
+		},
+		"blue": {
+			"id": "400",
+			"name": "BlueRay"
+		},
+		"super": {
+			"id": "250",
+			"name": "Super"
+		},
+		"high": {
+			"id": "150",
+			"name": "High"
+		},
+		"smooth": {
+			"id": "80",
+			"name": "Smooth"
+		}
+	},
 	"BaseDownloadConfigs": {
 		"danmu": "Danmu",
 		"danmuDescription": "Whether to download bullet comments. Default is set to follow the global settings.",
