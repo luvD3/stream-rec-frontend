@@ -91,6 +91,8 @@ describe("Bilibili platform form contract", () => {
 		expect(registry).toContain("BilibiliPlatformForm")
 		expect(bilibiliPlatform).toContain('controlPrefix={"downloadConfig"}')
 		expect(bilibiliPlatform).toContain("showCookies")
+		expect(bilibiliPlatform).toContain("showFetchDelay")
+		expect(bilibiliPlatform).toContain("showPartedDownloadRetry")
 		expect(bilibiliPlatform).toContain("showDownloadCheckInterval")
 		expect(bilibiliPlatform).not.toContain("qualityOptions")
 	})
