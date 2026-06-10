@@ -1,8 +1,9 @@
 "use client"
 
 import { usePlayerStore } from "@/src/lib/stores/player-store"
-import { useEffect, useRef, useCallback } from "react"
+import { useEffect, useRef, useCallback, useState } from "react"
 import { useRouter } from "@/src/i18n/routing"
+import { useSearchParams } from "next/navigation"
 import type Artplayer from "artplayer"
 import type Hls from "hls.js"
 import { ContentLayout } from "@/src/components/dashboard/content-layout"
@@ -11,6 +12,9 @@ import { encodeParams } from "@/src/lib/utils/proxy"
 import { getTrueUrl } from "@/src/lib/data/mediainfo/extractor-apis"
 import { BASE_PATH } from "@/src/lib/routes"
 import type { PlayerSource } from "@/src/lib/stores/player-store"
+import { fetchPlaybackManifest, playbackManifestToMediaInfo } from "@/src/lib/data/playback/client"
+import { DanmuCue, fetchDanmuCues } from "@/src/lib/data/playback/danmu"
+import { Button } from "@/src/components/new-york/ui/button"
 
 // Utility function to find stream by URL
 const findStreamByUrl = (streams: StreamInfo[], url: string) => {
@@ -71,11 +75,20 @@ const getCommonPlayerConfig = (isLive: boolean) => ({
 })
 
 export default function PlayerPage() {
-	const { source, mediaInfo, headers } = usePlayerStore()
+	const { source, mediaInfo, headers, setSource, setMediaInfo } = usePlayerStore()
 	const router = useRouter()
+	const searchParams = useSearchParams()
+	const recordId = searchParams.get("recordId")
 	const artRef = useRef<HTMLDivElement>(null)
 	const mpegts = useRef<any>(null)
 	const playerRef = useRef<Artplayer | null>(null)
+	const [recordLoading, setRecordLoading] = useState(false)
+	const [recordLoadError, setRecordLoadError] = useState<string | null>(null)
+	const [playerError, setPlayerError] = useState<string | null>(null)
+	const [danmuCues, setDanmuCues] = useState<DanmuCue[]>([])
+	const [danmuEnabled, setDanmuEnabled] = useState(true)
+	const [danmuError, setDanmuError] = useState<string | null>(null)
+	const [currentTime, setCurrentTime] = useState(0)
 
 	// Consolidated player state
 	const playerState = useRef({
@@ -179,7 +192,7 @@ export default function PlayerPage() {
 				{
 					type: "flv",
 					url: proxyUrl,
-					isLive: true,
+					isLive: source?.type === "stream",
 					cors: true,
 				},
 				{
@@ -308,6 +321,7 @@ export default function PlayerPage() {
 
 	const initializePlayer = useCallback(async () => {
 		if (!source || !artRef.current || !mediaInfo) return null
+		setPlayerError(null)
 
 		const Artplayer = (await import("artplayer")).default
 
@@ -484,6 +498,11 @@ export default function PlayerPage() {
 			finalFormat = "m3u8"
 		}
 
+		if (!["flv", "m3u8", "mp4", "ts"].includes(finalFormat)) {
+			setPlayerError(`Unsupported playback format: ${finalFormat}`)
+			return null
+		}
+
 		const art = new Artplayer({
 			container: artRef.current,
 			url: proxyUrl,
@@ -499,7 +518,7 @@ export default function PlayerPage() {
 			screenshot: false,
 			setting: true,
 			settings: settings,
-			loop: true,
+			loop: source.type === "stream",
 			flip: true,
 			playbackRate: true,
 			aspectRatio: true,
@@ -524,7 +543,85 @@ export default function PlayerPage() {
 	}, [buildProxyUrl, getQualities, getUrlAndSwitch, mediaInfo, playFlv, playM3U8, playMp4, playTs, source])
 
 	useEffect(() => {
+		if (!recordId) return
+
+		let cancelled = false
+		setRecordLoading(true)
+		setRecordLoadError(null)
+		setPlayerError(null)
+		setDanmuCues([])
+		setDanmuError(null)
+
+		fetchPlaybackManifest(recordId)
+			.then(manifest => {
+				if (cancelled) return
+				setMediaInfo(playbackManifestToMediaInfo(manifest), {})
+				setSource({
+					type: "server-file",
+					recordId,
+					url: manifest.video.url,
+					danmuUrl: manifest.danmu?.url,
+				})
+			})
+			.catch(error => {
+				if (cancelled) return
+				setRecordLoadError(error instanceof Error ? error.message : "Failed to load record")
+			})
+			.finally(() => {
+				if (!cancelled) {
+					setRecordLoading(false)
+				}
+			})
+
+		return () => {
+			cancelled = true
+		}
+	}, [recordId, setMediaInfo, setSource])
+
+	useEffect(() => {
+		if (source?.type !== "server-file" || !source.danmuUrl) {
+			setDanmuCues([])
+			setDanmuError(null)
+			return
+		}
+
+		let cancelled = false
+		setDanmuError(null)
+
+		fetchDanmuCues(buildProxyUrl(source.danmuUrl))
+			.then(cues => {
+				if (!cancelled) {
+					setDanmuCues(cues)
+				}
+			})
+			.catch(error => {
+				if (!cancelled) {
+					setDanmuCues([])
+					setDanmuError(error instanceof Error ? error.message : "Failed to load danmu")
+				}
+			})
+
+		return () => {
+			cancelled = true
+		}
+	}, [buildProxyUrl, source?.danmuUrl, source?.type])
+
+	useEffect(() => {
+		const timer = window.setInterval(() => {
+			const video = playerRef.current?.video as HTMLVideoElement | undefined
+			if (video) {
+				setCurrentTime(video.currentTime)
+			}
+		}, 250)
+
+		return () => window.clearInterval(timer)
+	}, [])
+
+	useEffect(() => {
 		if (!source) {
+			if (recordId || recordLoading) {
+				return
+			}
 			router.back()
 			return
 		}
@@ -545,15 +642,87 @@ export default function PlayerPage() {
 				console.log("player destroyed")
 			}
 		}
-	}, [headers, initializePlayer, mediaInfo, router, source])
+	}, [headers, initializePlayer, mediaInfo, recordId, recordLoading, router, source])
 
 	if (!source || (source.type === "stream" && (!mediaInfo?.streams || !headers))) {
+		if (recordLoading) {
+			return (
+				<ContentLayout title='Player'>
+					<div className='mx-auto flex aspect-video w-full max-w-[1280px] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
+						Loading record...
+					</div>
+				</ContentLayout>
+			)
+		}
+
+		if (recordLoadError) {
+			return (
+				<ContentLayout title='Player'>
+					<div className='mx-auto flex aspect-video w-full max-w-[1280px] items-center justify-center rounded-md bg-muted text-sm text-destructive'>
+						{recordLoadError}
+					</div>
+				</ContentLayout>
+			)
+		}
+
 		return null
 	}
 
+	const visibleDanmu = danmuEnabled
+		? danmuCues.filter(cue => currentTime >= cue.time && currentTime < cue.time + 7).slice(-80)
+		: []
+
 	return (
 		<ContentLayout title='Player'>
-			<div ref={artRef} className='mx-auto aspect-video w-full max-w-[1280px] sm:w-[98%] md:w-[95%] lg:w-[90%]' />
+			<div className='relative mx-auto aspect-video w-full max-w-[1280px] overflow-hidden rounded-md bg-black sm:w-[98%] md:w-[95%] lg:w-[90%]'>
+				<div ref={artRef} className='h-full w-full' />
+				{playerError && (
+					<div className='absolute inset-0 flex items-center justify-center bg-black/70 px-6 text-center text-sm text-white'>
+						{playerError}
+					</div>
+				)}
+				{visibleDanmu.map(cue => (
+					<span
+						key={cue.id}
+						className='pointer-events-none absolute whitespace-nowrap text-sm font-semibold [text-shadow:0_1px_2px_rgba(0,0,0,0.85)] md:text-base'
+						style={{
+							top: cue.mode === "bottom" ? `${72 + cue.lane * 2}%` : `${6 + cue.lane * 8}%`,
+							left: cue.mode === "scroll" ? "0" : "50%",
+							color: cue.color,
+							transform: cue.mode === "scroll" ? undefined : "translateX(-50%)",
+							animation: cue.mode === "scroll" ? "stream-rec-danmu-scroll 7s linear forwards" : undefined,
+						}}
+					>
+						{cue.text}
+					</span>
+				))}
+				{source.type === "server-file" && source.danmuUrl && (
+					<Button
+						type='button'
+						variant='secondary'
+						size='sm'
+						className='absolute right-3 top-3 h-8 bg-background/85 px-3 text-xs'
+						onClick={() => setDanmuEnabled(value => !value)}
+					>
+						{danmuEnabled ? "Danmu on" : "Danmu off"}
+					</Button>
+				)}
+				{danmuError && (
+					<div className='absolute bottom-3 left-3 max-w-[70%] rounded bg-background/85 px-3 py-2 text-xs text-muted-foreground'>
+						{danmuError}
+					</div>
+				)}
+			</div>
+			<style jsx global>{`
+				@keyframes stream-rec-danmu-scroll {
+					from {
+						transform: translateX(100%);
+					}
+					to {
+						transform: translateX(-120%);
+					}
+				}
+			`}</style>
 		</ContentLayout>
 	)
 }

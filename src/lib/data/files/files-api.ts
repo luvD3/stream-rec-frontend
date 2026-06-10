@@ -21,11 +21,10 @@ export const getServerFiles = async (streamDataId: string) => {
 	return fileResponse.parse(data)
 }
 
-export const getServerFile = async (streamDataId: string, fileName: string) => {
+export const getServerFile = async (streamDataId: string, fileName: string, requestHeaders: Record<string, string> = {}) => {
 	const session = await auth()
 	const headers: Record<string, string> = {
-		"Content-Type": "application/octet-stream",
-		"Accept-Ranges": "bytes",
+		...requestHeaders,
 	}
 
 	if (session?.user?.token) {
@@ -36,6 +35,7 @@ export const getServerFile = async (streamDataId: string, fileName: string) => {
 		const response = await axios.get(`${API_URL}/files/${streamDataId}/${fileName}`, {
 			headers,
 			responseType: "stream",
+			validateStatus: () => true,
 		})
 		return response
 	} catch (error) {

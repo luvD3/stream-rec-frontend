@@ -1,6 +1,7 @@
 import { decodeParams, encodeParams } from "@/src/lib/utils/proxy"
 import { getServerFile } from "@/src/lib/data/files/files-api"
 import axios from "axios"
+import { getForwardedMediaHeaders } from "@/src/lib/utils/media-headers"
 
 export const config = {
 	api: {
@@ -36,7 +37,7 @@ export async function GET(request: Request) {
 			const streamDataId = parts[2]
 			const fileName = parts[3]
 
-			const response = await getServerFile(streamDataId, fileName)
+			const response = await getServerFile(streamDataId, fileName, getForwardedMediaHeaders(request.headers))
 
 			return new Response(response.data, {
 				headers: {
@@ -56,9 +57,11 @@ export async function GET(request: Request) {
 			headers: {
 				Accept: "*/*",
 				Connection: "keep-alive",
+				...getForwardedMediaHeaders(request.headers),
 				...customHeaders,
 			},
 			responseType: "stream",
+			validateStatus: () => true,
 		})
 
 		const contentType = response.headers["content-type"]

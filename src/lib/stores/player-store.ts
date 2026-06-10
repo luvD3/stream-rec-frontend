@@ -5,6 +5,7 @@ export type PlayerSource = {
 	type: "stream" | "server-file"
 	url: string
 	recordId?: string
+	danmuUrl?: string
 }
 
 interface PlayerState {
