@@ -4,4 +4,6 @@
 scripts
 *Dockerfile*
 node_modules
+.next
+.git
 .env
