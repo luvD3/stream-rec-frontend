@@ -10,6 +10,8 @@ export type DanmuCue = {
 const DANMU_ENTRY_PATTERN = /<d\b[^>]*\bp=(["'])(.*?)\1[^>]*>([\s\S]*?)<\/d>/g
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024
 const LANES = 8
+const DEFAULT_VISIBLE_DURATION_SECONDS = 7
+const DEFAULT_VISIBLE_LIMIT = 80
 
 export async function fetchDanmuCues(url: string, maxBytes = DEFAULT_MAX_BYTES): Promise<DanmuCue[]> {
 	const response = await fetch(url, {
@@ -47,6 +49,34 @@ export function parseBilibiliDanmuXml(xml: string): DanmuCue[] {
 	}
 
 	return cues.sort((a, b) => a.time - b.time)
+}
+
+export function getVisibleDanmuCues(
+	cues: DanmuCue[],
+	currentTime: number,
+	enabled: boolean,
+	durationSeconds = DEFAULT_VISIBLE_DURATION_SECONDS,
+	limit = DEFAULT_VISIBLE_LIMIT
+): DanmuCue[] {
+	if (!enabled) return []
+	return cues.filter(cue => currentTime >= cue.time && currentTime < cue.time + durationSeconds).slice(-limit)
+}
+
+export function getNextDanmuCue(cues: DanmuCue[], currentTime: number): DanmuCue | null {
+	return cues.find(cue => cue.time > currentTime) ?? null
+}
+
+export function formatDanmuTime(seconds: number): string {
+	const safeSeconds = Math.max(0, Math.floor(seconds))
+	const hours = Math.floor(safeSeconds / 3600)
+	const minutes = Math.floor((safeSeconds % 3600) / 60)
+	const remainingSeconds = safeSeconds % 60
+
+	if (hours > 0) {
+		return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`
+	}
+
+	return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
 }
 
 function parseDanmuEntry(params: string, rawText: string, index: number): DanmuCue | null {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest"
-import { parseBilibiliDanmuXml } from "@/src/lib/data/playback/danmu"
+import {
+	formatDanmuTime,
+	getNextDanmuCue,
+	getVisibleDanmuCues,
+	parseBilibiliDanmuXml,
+} from "@/src/lib/data/playback/danmu"
 
 describe("Bilibili danmu parser", () => {
 	it("parses valid XML rows into timed cues", () => {
@@ -28,5 +33,20 @@ describe("Bilibili danmu parser", () => {
 
 		expect(cues).toHaveLength(1)
 		expect(cues[0]).toMatchObject({ time: 5, text: "good" })
+	})
+
+	it("reports visible and upcoming cues separately", () => {
+		const cues = parseBilibiliDanmuXml(`
+			<i>
+				<d p="416.332,1,25,16777215,0,0,0,0">first</d>
+				<d p="431.723,1,25,16777215,0,0,0,0">second</d>
+			</i>
+		`)
+
+		expect(getVisibleDanmuCues(cues, 10, true)).toHaveLength(0)
+		expect(getNextDanmuCue(cues, 10)?.text).toBe("first")
+		expect(formatDanmuTime(getNextDanmuCue(cues, 10)!.time)).toBe("6:56")
+		expect(getVisibleDanmuCues(cues, 417, true).map(cue => cue.text)).toEqual(["first"])
+		expect(getVisibleDanmuCues(cues, 417, false)).toHaveLength(0)
 	})
 })
