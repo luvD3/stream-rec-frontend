@@ -2,6 +2,9 @@ import { decodeParams, encodeParams } from "@/src/lib/utils/proxy"
 import { getServerFile } from "@/src/lib/data/files/files-api"
 import axios from "axios"
 import { getForwardedMediaHeaders } from "@/src/lib/utils/media-headers"
+import { createProxyResponseHeaders, nodeReadableToWebStream } from "@/src/lib/utils/proxy-response"
+
+export const runtime = "nodejs"
 
 export const config = {
 	api: {
@@ -39,10 +42,8 @@ export async function GET(request: Request) {
 
 			const response = await getServerFile(streamDataId, fileName, getForwardedMediaHeaders(request.headers))
 
-			return new Response(response.data, {
-				headers: {
-					...(response.headers as any),
-				},
+			return new Response(nodeReadableToWebStream(response.data), {
+				headers: createProxyResponseHeaders(response.headers as Record<string, string | number | string[] | undefined>),
 				status: response.status,
 				statusText: response.statusText,
 			})
@@ -101,11 +102,13 @@ export async function GET(request: Request) {
 				return `/api/proxy?data=${encodeParams(fullUrl, customHeaders)}`
 			}).join('\n')
 
+			const responseHeaders = createProxyResponseHeaders(
+				response.headers as Record<string, string | number | string[] | undefined>
+			)
+			responseHeaders.set("Content-Type", "application/vnd.apple.mpegurl")
+
 			return new Response(rewrittenText, {
-				headers: {
-					"Content-Type": "application/vnd.apple.mpegurl",
-					...(response.headers as any),
-				},
+				headers: responseHeaders,
 				status: response.status,
 				statusText: response.statusText,
 			})
@@ -126,9 +129,7 @@ export async function GET(request: Request) {
 		})
 
 		return new Response(stream, {
-			headers: {
-				...(response.headers as any),
-			},
+			headers: createProxyResponseHeaders(response.headers as Record<string, string | number | string[] | undefined>),
 			status: response.status,
 			statusText: response.statusText,
 		})

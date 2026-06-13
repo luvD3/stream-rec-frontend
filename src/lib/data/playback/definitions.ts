@@ -20,5 +20,15 @@ export const playbackManifestSchema = z.object({
 	danmu: playbackFileSchema.nullish(),
 })
 
+export const playbackFlvSeekIndexSchema = z.object({
+	format: z.literal("flv"),
+	duration: z.number(),
+	fileSize: z.number(),
+	times: z.array(z.number()),
+	filepositions: z.array(z.number()),
+	keyframeCount: z.number(),
+})
+
 export type PlaybackFile = z.infer<typeof playbackFileSchema>
 export type PlaybackManifest = z.infer<typeof playbackManifestSchema>
+export type PlaybackFlvSeekIndex = z.infer<typeof playbackFlvSeekIndexSchema>

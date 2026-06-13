@@ -12,7 +12,9 @@ import { encodeParams } from "@/src/lib/utils/proxy"
 import { getTrueUrl } from "@/src/lib/data/mediainfo/extractor-apis"
 import { BASE_PATH } from "@/src/lib/routes"
 import type { PlayerSource } from "@/src/lib/stores/player-store"
-import { fetchPlaybackManifest, playbackManifestToMediaInfo } from "@/src/lib/data/playback/client"
+import { fetchPlaybackFlvSeekIndex, fetchPlaybackManifest, playbackManifestToMediaInfo } from "@/src/lib/data/playback/client"
+import { injectMpegtsFlvSeekIndex } from "@/src/lib/data/playback/flv-seek-index"
+import { getMpegtsPlayerConfig } from "@/src/lib/data/playback/player-config"
 import {
 	DanmuCue,
 	fetchDanmuCues,
@@ -69,16 +71,6 @@ const getProxyUrlForStream = async (
 	}
 	return proxyUrl
 }
-
-// Common player configuration
-const getCommonPlayerConfig = (isLive: boolean) => ({
-	autoCleanupSourceBuffer: true,
-	autoCleanupMaxBackwardDuration: 2 * 60,
-	lazyLoad: isLive,
-	lazyLoadMaxDuration: 5 * 60, // 5 minutes
-	enableStashBuffer: false,
-	stashInitialSize: 128,
-})
 
 export default function PlayerPage() {
 	const { source, mediaInfo, headers, setSource, setMediaInfo } = usePlayerStore()
@@ -204,9 +196,30 @@ export default function PlayerPage() {
 					cors: true,
 				},
 				{
-					...getCommonPlayerConfig(source?.type === "stream"),
+					...getMpegtsPlayerConfig(source?.type === "stream"),
 				}
 			)
+
+			let flvSeekIndexApplied = false
+			const flvSeekIndexPromise =
+				source?.type === "server-file" && recordId
+					? fetchPlaybackFlvSeekIndex(recordId).catch(error => {
+							console.warn("Failed to load FLV seek index:", error)
+							return null
+						})
+					: null
+			const applyFlvSeekIndex = (index: Awaited<typeof flvSeekIndexPromise>) => {
+				if (!index || flvSeekIndexApplied) return
+				flvSeekIndexApplied = injectMpegtsFlvSeekIndex(flv, index)
+				if (flvSeekIndexApplied) {
+					console.log("FLV seek index loaded", index.keyframeCount)
+				}
+			}
+
+			flvSeekIndexPromise?.then(applyFlvSeekIndex)
+			flv.on(mpegts.current.Events?.MEDIA_INFO || "media_info", () => {
+				flvSeekIndexPromise?.then(applyFlvSeekIndex)
+			})
 
 			flv.attachMediaElement(video)
 			flv.load()
@@ -218,7 +231,7 @@ export default function PlayerPage() {
 			})
 			art.on("destroy", () => destroyFlvPlayer(art))
 		},
-		[buildProxyUrl, getUrlAndSwitch, mediaInfo, source]
+		[buildProxyUrl, getUrlAndSwitch, mediaInfo, recordId, source]
 	)
 
 	const playTs = useCallback(
@@ -249,7 +262,7 @@ export default function PlayerPage() {
 					cors: true,
 				},
 				{
-					...getCommonPlayerConfig(source?.type === "stream"),
+					...getMpegtsPlayerConfig(source?.type === "stream"),
 				}
 			)
 

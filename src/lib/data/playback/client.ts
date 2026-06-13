@@ -1,5 +1,10 @@
 import { MediaInfo } from "@/src/lib/data/mediainfo/definitions"
-import { PlaybackManifest, playbackManifestSchema } from "@/src/lib/data/playback/definitions"
+import {
+	PlaybackFlvSeekIndex,
+	PlaybackManifest,
+	playbackFlvSeekIndexSchema,
+	playbackManifestSchema,
+} from "@/src/lib/data/playback/definitions"
 import { BASE_PATH } from "@/src/lib/routes"
 
 export async function fetchPlaybackManifest(recordId: string): Promise<PlaybackManifest> {
@@ -13,6 +18,19 @@ export async function fetchPlaybackManifest(recordId: string): Promise<PlaybackM
 	}
 
 	return playbackManifestSchema.parse(await response.json())
+}
+
+export async function fetchPlaybackFlvSeekIndex(recordId: string): Promise<PlaybackFlvSeekIndex> {
+	const response = await fetch(`${BASE_PATH}/api/streams/${recordId}/playback/flv-index`, {
+		cache: "no-store",
+	})
+
+	if (!response.ok) {
+		const errorText = await response.text()
+		throw new Error(`Failed to load playback FLV seek index: ${response.status} ${errorText}`)
+	}
+
+	return playbackFlvSeekIndexSchema.parse(await response.json())
 }
 
 export function playbackManifestToMediaInfo(manifest: PlaybackManifest): MediaInfo {
