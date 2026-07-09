@@ -5,16 +5,24 @@ import { useEffect, useRef, useCallback, useState } from "react"
 import { useRouter } from "@/src/i18n/routing"
 import { useSearchParams } from "next/navigation"
 import type Artplayer from "artplayer"
-import type Hls from "hls.js"
 import { ContentLayout } from "@/src/components/dashboard/content-layout"
 import { MediaInfo, StreamInfo } from "@/src/lib/data/mediainfo/definitions"
 import { encodeParams } from "@/src/lib/utils/proxy"
 import { getTrueUrl } from "@/src/lib/data/mediainfo/extractor-apis"
 import { BASE_PATH } from "@/src/lib/routes"
 import type { PlayerSource } from "@/src/lib/stores/player-store"
-import { fetchPlaybackFlvSeekIndex, fetchPlaybackManifest, playbackManifestToMediaInfo } from "@/src/lib/data/playback/client"
+import {
+	fetchPlaybackFlvSeekIndex,
+	fetchPlaybackManifest,
+	playbackManifestToMediaInfo,
+} from "@/src/lib/data/playback/client"
 import { injectMpegtsFlvSeekIndex } from "@/src/lib/data/playback/flv-seek-index"
 import { getMpegtsPlayerConfig } from "@/src/lib/data/playback/player-config"
+import {
+	isPlaybackPositionBuffered,
+	jumpToNearbyBufferedStart,
+	resetMpegtsLazyLoadStateForUnbufferedSeek,
+} from "@/src/lib/data/playback/mpegts-seek-recovery"
 import {
 	DanmuCue,
 	fetchDanmuCues,
@@ -23,6 +31,13 @@ import {
 	getVisibleDanmuCues,
 } from "@/src/lib/data/playback/danmu"
 import { Button } from "@/src/components/new-york/ui/button"
+import {
+	destroyArtPlayer,
+	destroyHlsPlayer,
+	destroyMpegtsPlayer,
+	releaseMediaElement,
+} from "@/src/lib/data/playback/player-lifecycle"
+import { isRecordPlaybackSourceReady } from "@/src/lib/data/playback/player-source"
 
 // Utility function to find stream by URL
 const findStreamByUrl = (streams: StreamInfo[], url: string) => {
@@ -73,7 +88,7 @@ const getProxyUrlForStream = async (
 }
 
 export default function PlayerPage() {
-	const { source, mediaInfo, headers, setSource, setMediaInfo } = usePlayerStore()
+	const { source, mediaInfo, headers, setSource, setMediaInfo, clearPlayer } = usePlayerStore()
 	const router = useRouter()
 	const searchParams = useSearchParams()
 	const recordId = searchParams.get("recordId")
@@ -81,6 +96,7 @@ export default function PlayerPage() {
 	const mpegts = useRef<any>(null)
 	const playerRef = useRef<Artplayer | null>(null)
 	const playerInitRef = useRef(0)
+	const flvSeekRecoveryCleanupRef = useRef<(() => void) | null>(null)
 	const [recordLoading, setRecordLoading] = useState(false)
 	const [recordLoadError, setRecordLoadError] = useState<string | null>(null)
 	const [playerError, setPlayerError] = useState<string | null>(null)
@@ -89,6 +105,7 @@ export default function PlayerPage() {
 	const [danmuLoading, setDanmuLoading] = useState(false)
 	const [danmuError, setDanmuError] = useState<string | null>(null)
 	const [currentTime, setCurrentTime] = useState(0)
+	const recordSourceReady = isRecordPlaybackSourceReady(source, mediaInfo, recordId)
 
 	// Consolidated player state
 	const playerState = useRef({
@@ -121,8 +138,10 @@ export default function PlayerPage() {
 
 	const destroyFlvPlayer = (art: Artplayer) => {
 		try {
+			flvSeekRecoveryCleanupRef.current?.()
+			flvSeekRecoveryCleanupRef.current = null
 			if (art.flv) {
-				;(art.flv as any).destroy()
+				destroyMpegtsPlayer(art.flv)
 				art.flv = null
 				console.log("flv player destroyed")
 			}
@@ -134,12 +153,24 @@ export default function PlayerPage() {
 	const destroyTsPlayer = (art: Artplayer) => {
 		try {
 			if (art.ts) {
-				;(art.ts as any).destroy()
+				destroyMpegtsPlayer(art.ts)
 				art.ts = null
 				console.log("ts player destroyed")
 			}
 		} catch (error) {
 			console.error("Error destroying TS player:", error)
+		}
+	}
+
+	const destroyHlsPlayerForArt = (art: Artplayer) => {
+		try {
+			if (art.hls) {
+				destroyHlsPlayer(art.hls)
+				art.hls = null
+				console.log("hls player destroyed")
+			}
+		} catch (error) {
+			console.error("Error destroying HLS player:", error)
 		}
 	}
 
@@ -169,7 +200,9 @@ export default function PlayerPage() {
 	)
 
 	const playFlv = useCallback(
-		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer) => {
+		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer, initId: number) => {
+			const isCurrentInit = () => initId === playerInitRef.current
+
 			if (!mpegts.current.isSupported()) {
 				art.notice.show = "Unsupported playback format : flv"
 				return
@@ -183,10 +216,10 @@ export default function PlayerPage() {
 			}
 
 			const updatedStreamInfo = await handleStreamSwitch(streamInfo, url, mediaInfo)
-			if (!updatedStreamInfo) return
+			if (!updatedStreamInfo || !isCurrentInit()) return
 
 			const proxyUrl = await getProxyUrlForStream(updatedStreamInfo, source, buildProxyUrl, getUrlAndSwitch, art)
-			if (!proxyUrl) return
+			if (!proxyUrl || !isCurrentInit()) return
 
 			const flv = mpegts.current.createPlayer(
 				{
@@ -209,7 +242,7 @@ export default function PlayerPage() {
 						})
 					: null
 			const applyFlvSeekIndex = (index: Awaited<typeof flvSeekIndexPromise>) => {
-				if (!index || flvSeekIndexApplied) return
+				if (!index || flvSeekIndexApplied || !isCurrentInit() || art.flv !== flv) return
 				flvSeekIndexApplied = injectMpegtsFlvSeekIndex(flv, index)
 				if (flvSeekIndexApplied) {
 					console.log("FLV seek index loaded", index.keyframeCount)
@@ -221,9 +254,41 @@ export default function PlayerPage() {
 				flvSeekIndexPromise?.then(applyFlvSeekIndex)
 			})
 
+			if (!isCurrentInit()) {
+				destroyMpegtsPlayer(flv)
+				releaseMediaElement(video)
+				return
+			}
+
 			flv.attachMediaElement(video)
+			if (source?.type === "server-file") {
+				let seekGapRecoveryTimer: number | null = null
+				const handleSeeking = () => {
+					if (isPlaybackPositionBuffered(video)) return
+
+					resetMpegtsLazyLoadStateForUnbufferedSeek(flv, video)
+					if (seekGapRecoveryTimer !== null) window.clearTimeout(seekGapRecoveryTimer)
+
+					let remainingAttempts = 50
+					const recoverSeekGap = () => {
+						seekGapRecoveryTimer = null
+						if (jumpToNearbyBufferedStart(video)) return
+
+						remainingAttempts -= 1
+						if (remainingAttempts > 0) {
+							seekGapRecoveryTimer = window.setTimeout(recoverSeekGap, 100)
+						}
+					}
+
+					seekGapRecoveryTimer = window.setTimeout(recoverSeekGap, 100)
+				}
+				video.addEventListener("seeking", handleSeeking)
+				flvSeekRecoveryCleanupRef.current = () => {
+					video.removeEventListener("seeking", handleSeeking)
+					if (seekGapRecoveryTimer !== null) window.clearTimeout(seekGapRecoveryTimer)
+				}
+			}
 			flv.load()
-			flv.play()
 			art.flv = flv
 			flv.on("error", () => {
 				console.log("error", flv.error)
@@ -235,7 +300,9 @@ export default function PlayerPage() {
 	)
 
 	const playTs = useCallback(
-		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer) => {
+		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer, initId: number) => {
+			const isCurrentInit = () => initId === playerInitRef.current
+
 			if (!mpegts.current.isSupported()) {
 				art.notice.show = "Unsupported playback format : ts"
 				return
@@ -249,10 +316,10 @@ export default function PlayerPage() {
 			}
 
 			const updatedStreamInfo = await handleStreamSwitch(streamInfo, url, mediaInfo)
-			if (!updatedStreamInfo) return
+			if (!updatedStreamInfo || !isCurrentInit()) return
 
 			const proxyUrl = await getProxyUrlForStream(updatedStreamInfo, source, buildProxyUrl, getUrlAndSwitch, art)
-			if (!proxyUrl) return
+			if (!proxyUrl || !isCurrentInit()) return
 
 			const ts = mpegts.current.createPlayer(
 				{
@@ -266,9 +333,14 @@ export default function PlayerPage() {
 				}
 			)
 
+			if (!isCurrentInit()) {
+				destroyMpegtsPlayer(ts)
+				releaseMediaElement(video)
+				return
+			}
+
 			ts.attachMediaElement(video)
 			ts.load()
-			ts.play()
 			art.ts = ts
 			art.on("destroy", () => destroyTsPlayer(art))
 		},
@@ -276,9 +348,12 @@ export default function PlayerPage() {
 	)
 
 	const playM3U8 = useCallback(
-		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer) => {
+		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer, initId: number) => {
+			const isCurrentInit = () => initId === playerInitRef.current
+
 			destroyFlvPlayer(art)
 			destroyTsPlayer(art)
+			destroyHlsPlayerForArt(art)
 
 			if (!streamInfo) {
 				art.notice.show = "No stream info"
@@ -286,29 +361,28 @@ export default function PlayerPage() {
 			}
 
 			const updatedStreamInfo = await handleStreamSwitch(streamInfo, url, mediaInfo)
-			if (!updatedStreamInfo) return
+			if (!updatedStreamInfo || !isCurrentInit()) return
 
 			const proxyUrl = await getProxyUrlForStream(updatedStreamInfo, source, buildProxyUrl, getUrlAndSwitch, art)
-			if (!proxyUrl) {
+			if (!proxyUrl || !isCurrentInit()) {
 				return
 			}
 
 			const Hls = (await import("hls.js")).default
+			if (!isCurrentInit()) return
+
 			if (Hls.isSupported()) {
-				if (art.hls) {
-					;(art.hls as Hls).destroy()
-					art.hls = null
-				}
+				destroyHlsPlayerForArt(art)
 
 				const hls = new Hls()
+				if (!isCurrentInit()) {
+					destroyHlsPlayer(hls)
+					return
+				}
 				hls.loadSource(proxyUrl)
 				hls.attachMedia(video)
 				art.hls = hls
-				art.on("destroy", () => {
-					;(hls as Hls).destroy()
-					art.hls = null
-					console.log("hls player destroyed")
-				})
+				art.on("destroy", () => destroyHlsPlayerForArt(art))
 			} else if (video.canPlayType("application/vnd.apple.mpegurl")) {
 				video.src = proxyUrl
 			} else {
@@ -319,9 +393,12 @@ export default function PlayerPage() {
 	)
 
 	const playMp4 = useCallback(
-		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer) => {
+		async (video: HTMLVideoElement, streamInfo: StreamInfo | null, url: string, art: Artplayer, initId: number) => {
+			const isCurrentInit = () => initId === playerInitRef.current
+
 			destroyFlvPlayer(art)
 			destroyTsPlayer(art)
+			destroyHlsPlayerForArt(art)
 
 			if (!streamInfo) {
 				art.notice.show = "No stream info"
@@ -329,10 +406,10 @@ export default function PlayerPage() {
 			}
 
 			const updatedStreamInfo = await handleStreamSwitch(streamInfo, url, mediaInfo)
-			if (!updatedStreamInfo) return
+			if (!updatedStreamInfo || !isCurrentInit()) return
 
 			const proxyUrl = await getProxyUrlForStream(updatedStreamInfo, source, buildProxyUrl, getUrlAndSwitch, art)
-			if (!proxyUrl) {
+			if (!proxyUrl || !isCurrentInit()) {
 				return
 			}
 			video.src = proxyUrl
@@ -354,23 +431,23 @@ export default function PlayerPage() {
 			if (initId !== playerInitRef.current || !artRef.current) return null
 
 			if (playerRef.current) {
-				playerRef.current.destroy(false)
+				destroyArtPlayer(playerRef.current)
 				playerRef.current = null
 			}
 
 			let initialStream
 			const customTypeHandlers = {
 				flv: (video: HTMLVideoElement, url: string, art: Artplayer) => {
-					playFlv(video, playerState.current.streamInfo, url, art)
+					playFlv(video, playerState.current.streamInfo, url, art, initId)
 				},
 				m3u8: (video: HTMLVideoElement, url: string, art: Artplayer) => {
-					playM3U8(video, playerState.current.streamInfo, url, art)
+					playM3U8(video, playerState.current.streamInfo, url, art, initId)
 				},
 				mp4: (video: HTMLVideoElement, url: string, art: Artplayer) => {
-					playMp4(video, playerState.current.streamInfo, url, art)
+					playMp4(video, playerState.current.streamInfo, url, art, initId)
 				},
 				ts: (video: HTMLVideoElement, url: string, art: Artplayer) => {
-					playTs(video, playerState.current.streamInfo, url, art)
+					playTs(video, playerState.current.streamInfo, url, art, initId)
 				},
 			}
 
@@ -567,7 +644,7 @@ export default function PlayerPage() {
 			})
 
 			if (initId !== playerInitRef.current) {
-				art.destroy(false)
+				destroyArtPlayer(art)
 				return null
 			}
 
@@ -582,6 +659,7 @@ export default function PlayerPage() {
 		if (!recordId) return
 
 		let cancelled = false
+		clearPlayer()
 		setRecordLoading(true)
 		setRecordLoadError(null)
 		setPlayerError(null)
@@ -612,7 +690,7 @@ export default function PlayerPage() {
 		return () => {
 			cancelled = true
 		}
-	}, [recordId, setMediaInfo, setSource])
+	}, [clearPlayer, recordId, setMediaInfo, setSource])
 
 	useEffect(() => {
 		if (source?.type !== "server-file" || !source.danmuUrl) {
@@ -661,11 +739,30 @@ export default function PlayerPage() {
 	}, [])
 
 	useEffect(() => {
+		return () => {
+			playerInitRef.current += 1
+
+			if (playerRef.current) {
+				console.log("destroying player...")
+				destroyArtPlayer(playerRef.current)
+				playerRef.current = null
+				console.log("player destroyed")
+			}
+
+			clearPlayer()
+		}
+	}, [clearPlayer])
+
+	useEffect(() => {
 		if (!source) {
 			if (recordId || recordLoading) {
 				return
 			}
 			router.back()
+			return
+		}
+
+		if (recordId && !recordSourceReady) {
 			return
 		}
 
@@ -692,29 +789,29 @@ export default function PlayerPage() {
 
 			if (playerRef.current) {
 				console.log("destroying player...")
-				playerRef.current.destroy(false)
+				destroyArtPlayer(playerRef.current)
 				playerRef.current = null
 				console.log("player destroyed")
 			}
 		}
-	}, [headers, initializePlayer, mediaInfo, recordId, recordLoading, router, source])
+	}, [headers, initializePlayer, mediaInfo, recordId, recordLoading, recordSourceReady, router, source])
 
-	if (!source || (source.type === "stream" && (!mediaInfo?.streams || !headers))) {
-		if (recordLoading) {
-			return (
-				<ContentLayout title='Player'>
-					<div className='mx-auto flex aspect-video w-full max-w-[1280px] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
-						Loading record...
-					</div>
-				</ContentLayout>
-			)
-		}
-
+	if ((recordId && !recordSourceReady) || !source || (source.type === "stream" && (!mediaInfo?.streams || !headers))) {
 		if (recordLoadError) {
 			return (
 				<ContentLayout title='Player'>
 					<div className='mx-auto flex aspect-video w-full max-w-[1280px] items-center justify-center rounded-md bg-muted text-sm text-destructive'>
 						{recordLoadError}
+					</div>
+				</ContentLayout>
+			)
+		}
+
+		if (recordLoading || (recordId && !recordSourceReady)) {
+			return (
+				<ContentLayout title='Player'>
+					<div className='mx-auto flex aspect-video w-full max-w-[1280px] items-center justify-center rounded-md bg-muted text-sm text-muted-foreground'>
+						Loading record...
 					</div>
 				</ContentLayout>
 			)

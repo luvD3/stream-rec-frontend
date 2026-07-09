@@ -14,6 +14,7 @@ interface PlayerState {
 	headers: Record<string, string> | null
 	setMediaInfo: (mediaInfo: MediaInfo, headers: Record<string, string>) => void
 	setSource: (source: PlayerSource) => void
+	clearPlayer: () => void
 	clearMediaInfo: () => void
 }
 
@@ -23,5 +24,6 @@ export const usePlayerStore = create<PlayerState>(set => ({
 	headers: null,
 	setSource: (source: PlayerSource) => set({ source }),
 	setMediaInfo: (mediaInfo, headers) => set({ mediaInfo, headers }),
+	clearPlayer: () => set({ source: null, mediaInfo: null, headers: null }),
 	clearMediaInfo: () => set({ mediaInfo: null, headers: null }),
 }))
