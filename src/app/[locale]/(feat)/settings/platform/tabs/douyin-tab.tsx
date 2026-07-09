@@ -8,6 +8,9 @@ import {
 	PlatformTabContentProps,
 } from "@/src/app/[locale]/(feat)/settings/platform/tabs/common-platform-tab"
 import { DouyinQuality, DouyinTabString } from "@/src/app/hooks/translations/douyin-translations"
+import { CookiesFormfield } from "@/src/app/[locale]/(feat)/settings/components/form/cookies-formfield"
+import { DouyinCookieActions } from "@/src/app/[locale]/(feat)/settings/platform/components/douyin-cookie-actions"
+import { useFormContext } from "react-hook-form"
 
 export type DouyinTabContentProps = {
 	qualityOptions: DouyinQuality[]
@@ -25,66 +28,92 @@ export const DouyinTabContent = ({
 	allowNone = false,
 	strings,
 }: DouyinTabContentProps) => {
-	return (
-		<PlatformTabContent
-			control={control}
-			controlPrefix={controlPrefix}
-			showCookies={showCookies}
-			showPartedDownloadRetry={showPartedDownloadRetry}
-			strings={strings}
-			showFetchDelay={showFetchDelay}
-			showDownloadCheckInterval={showDownloadCheckInterval}
-		>
-			<FormField
-				control={control}
-				name={controlPrefix ? `${controlPrefix}.quality` : "quality"}
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel>{strings.quality}</FormLabel>
-						<Select
-							onValueChange={field.onChange}
-							defaultValue={field.value}
-							placeholder={strings.qualityDefault}
-							allowNone={allowNone}
-							options={qualityOptions.map(quality => (
-								<SelectItem key={quality.quality} value={quality.quality}>
-									{quality.description}
-								</SelectItem>
-							))}
-						/>
-						<FormDescription>{strings.qualityDescription}</FormDescription>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
+	const form = useFormContext()
+	const cookieFieldName = controlPrefix ? `${controlPrefix}.cookies` : "cookies"
+	const cookieValue = form.watch(cookieFieldName) as string | null | undefined
 
-			<FormField
+	const setCookieValue = (value: string | null) => {
+		form.setValue(cookieFieldName, value, {
+			shouldDirty: true,
+			shouldTouch: true,
+			shouldValidate: true,
+		})
+	}
+
+	return (
+		<>
+			<PlatformTabContent
 				control={control}
-				name={controlPrefix ? `${controlPrefix}.sourceFormat` : "sourceFormat"}
-				render={({ field }) => (
-					<FormItem>
-						<FormLabel>
-							<div className={"flex flex-row items-center gap-x-3"}>
-								{strings.sourceFormat}
-								<Badge>Experimental</Badge>
-							</div>
-						</FormLabel>
-						<Select
-							onValueChange={field.onChange}
-							defaultValue={field.value}
-							placeholder={strings.sourceFormatPlaceholder}
-							options={["flv", "hls"].map(format => (
-								<SelectItem key={format} value={format}>
-									{format}
-								</SelectItem>
-							))}
-							allowNone={allowNone}
-						/>
-						<FormDescription>{strings.sourceFormatDescription}</FormDescription>
-						<FormMessage />
-					</FormItem>
-				)}
-			/>
-		</PlatformTabContent>
+				controlPrefix={controlPrefix}
+				showCookies={false}
+				showPartedDownloadRetry={showPartedDownloadRetry}
+				strings={strings}
+				showFetchDelay={showFetchDelay}
+				showDownloadCheckInterval={showDownloadCheckInterval}
+			>
+				<FormField
+					control={control}
+					name={controlPrefix ? `${controlPrefix}.quality` : "quality"}
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>{strings.quality}</FormLabel>
+							<Select
+								onValueChange={field.onChange}
+								defaultValue={field.value}
+								placeholder={strings.qualityDefault}
+								allowNone={allowNone}
+								options={qualityOptions.map(quality => (
+									<SelectItem key={quality.quality} value={quality.quality}>
+										{quality.description}
+									</SelectItem>
+								))}
+							/>
+							<FormDescription>{strings.qualityDescription}</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+
+				<FormField
+					control={control}
+					name={controlPrefix ? `${controlPrefix}.sourceFormat` : "sourceFormat"}
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>
+								<div className={"flex flex-row items-center gap-x-3"}>
+									{strings.sourceFormat}
+									<Badge>Experimental</Badge>
+								</div>
+							</FormLabel>
+							<Select
+								onValueChange={field.onChange}
+								defaultValue={field.value}
+								placeholder={strings.sourceFormatPlaceholder}
+								options={["flv", "hls"].map(format => (
+									<SelectItem key={format} value={format}>
+										{format}
+									</SelectItem>
+								))}
+								allowNone={allowNone}
+							/>
+							<FormDescription>{strings.sourceFormatDescription}</FormDescription>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+			</PlatformTabContent>
+
+			{showCookies && (
+				<div className='mt-6 space-y-3 fade-in'>
+					<CookiesFormfield
+						title={strings.cookieTitle}
+						description={strings.cookieDescription}
+						name={cookieFieldName}
+						control={control}
+					/>
+					<DouyinCookieActions cookie={cookieValue} onCookieChange={setCookieValue} strings={strings.cookieActions} />
+				</div>
+			)}
+		</>
 	)
 }

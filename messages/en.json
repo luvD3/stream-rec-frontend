@@ -224,7 +224,18 @@
 		"sourceFormat": "Source format",
 		"sourceFormatDescription": "Select the source format of the Douyin live stream. Default is set to flv. <important>It is recommended to use flv sources as some streams has no hls streams. Please use Streamlink to download HLS sources.</important>",
 		"sourceFormatPlaceholder": "Please select a source format",
-		"cookieDescription": "Please copy and paste, invalid cookies will be discarded automatically. Optional. <important>__ac_nonce='anything' and __ac_signature='anything' must be included</important>"
+		"cookieDescription": "Please copy and paste, invalid cookies will be discarded automatically. Optional. <important>__ac_nonce='anything' and __ac_signature='anything' must be included</important>",
+		"cookieActions": {
+			"openLogin": "Open Douyin Live login",
+			"verifyCookie": "Check Cookie",
+			"clearCookie": "Clear Cookie",
+			"cookieRequired": "Paste a Douyin Cookie before checking.",
+			"clearSuccess": "Douyin Cookie cleared.",
+			"verifySuccess": "Douyin Cookie has the required fields.",
+			"verifyFailed": "Douyin Cookie is missing required fields.",
+			"hasRequiredFields": "Required fields present",
+			"missingFields": "Missing"
+		}
 	},
 	"Douyu": {
 		"platform": "Douyu",
