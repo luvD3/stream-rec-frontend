@@ -16,9 +16,10 @@ import {
 	fetchPlaybackManifest,
 	playbackManifestToMediaInfo,
 } from "@/src/lib/data/playback/client"
-import { injectMpegtsFlvSeekIndex } from "@/src/lib/data/playback/flv-seek-index"
+import { injectMpegtsFlvSeekIndex, isUsableFlvSeekIndex } from "@/src/lib/data/playback/flv-seek-index"
 import { getMpegtsPlayerConfig } from "@/src/lib/data/playback/player-config"
 import {
+	createDeferredMpegtsSeek,
 	isPlaybackPositionBuffered,
 	jumpToNearbyBufferedStart,
 	resetMpegtsLazyLoadStateForUnbufferedSeek,
@@ -234,18 +235,36 @@ export default function PlayerPage() {
 			)
 
 			let flvSeekIndexApplied = false
+			let flvSeekIndexFailed = false
+			const deferredSeek = createDeferredMpegtsSeek()
+			const markFlvSeekIndexFailed = () => {
+				flvSeekIndexFailed = true
+				deferredSeek.clear()
+				if (isCurrentInit()) {
+					art.notice.show = "Fast seeking is unavailable for this recording"
+				}
+			}
 			const flvSeekIndexPromise =
 				source?.type === "server-file" && recordId
 					? fetchPlaybackFlvSeekIndex(recordId).catch(error => {
 							console.warn("Failed to load FLV seek index:", error)
+							markFlvSeekIndexFailed()
 							return null
 						})
 					: null
 			const applyFlvSeekIndex = (index: Awaited<typeof flvSeekIndexPromise>) => {
 				if (!index || flvSeekIndexApplied || !isCurrentInit() || art.flv !== flv) return
+				if (!isUsableFlvSeekIndex(index)) {
+					markFlvSeekIndexFailed()
+					return
+				}
 				flvSeekIndexApplied = injectMpegtsFlvSeekIndex(flv, index)
 				if (flvSeekIndexApplied) {
 					console.log("FLV seek index loaded", index.keyframeCount)
+					resetMpegtsLazyLoadStateForUnbufferedSeek(flv, video)
+					if (deferredSeek.replay(flv)) {
+						art.notice.show = "Seeking..."
+					}
 				}
 			}
 
@@ -264,6 +283,17 @@ export default function PlayerPage() {
 			if (source?.type === "server-file") {
 				let seekGapRecoveryTimer: number | null = null
 				const handleSeeking = () => {
+					if (!flvSeekIndexApplied) {
+						if (flvSeekIndexFailed) {
+							deferredSeek.clear()
+							art.notice.show = "Fast seeking is unavailable for this recording"
+						} else if (deferredSeek.capture(video)) {
+							art.notice.show = "Preparing seek index..."
+						}
+						return
+					}
+
+					deferredSeek.clear()
 					if (isPlaybackPositionBuffered(video)) return
 
 					resetMpegtsLazyLoadStateForUnbufferedSeek(flv, video)
@@ -286,6 +316,7 @@ export default function PlayerPage() {
 				flvSeekRecoveryCleanupRef.current = () => {
 					video.removeEventListener("seeking", handleSeeking)
 					if (seekGapRecoveryTimer !== null) window.clearTimeout(seekGapRecoveryTimer)
+					deferredSeek.clear()
 				}
 			}
 			flv.load()

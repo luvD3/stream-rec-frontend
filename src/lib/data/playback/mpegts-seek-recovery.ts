@@ -6,6 +6,7 @@ type MediaElementLike = {
 }
 
 type MpegtsRuntimePlayer = {
+	currentTime?: number
 	_player_engine?: {
 		// mpegts.js 1.8.0 restarts IO on seek without clearing this lazy-load flag.
 		_loading_controller?: {
@@ -15,6 +16,34 @@ type MpegtsRuntimePlayer = {
 }
 
 const MAX_RECOVERABLE_GAP_SECONDS = 0.5
+
+export function createDeferredMpegtsSeek() {
+	let pendingTarget: number | null = null
+
+	return {
+		capture(video: MediaElementLike) {
+			const target = video.currentTime
+			if (!Number.isFinite(target) || target < 0 || isPlaybackPositionBuffered(video)) {
+				pendingTarget = null
+				return false
+			}
+
+			pendingTarget = target
+			return true
+		},
+		replay(player: MpegtsRuntimePlayer) {
+			if (pendingTarget === null) return false
+
+			const target = pendingTarget
+			pendingTarget = null
+			player.currentTime = target
+			return true
+		},
+		clear() {
+			pendingTarget = null
+		},
+	}
+}
 
 export function isPlaybackPositionBuffered(video: MediaElementLike) {
 	const target = video.currentTime

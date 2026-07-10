@@ -7,6 +7,8 @@ import {
 } from "@/src/lib/data/playback/definitions"
 import { BASE_PATH } from "@/src/lib/routes"
 
+const playbackFlvSeekIndexRequests = new Map<string, Promise<PlaybackFlvSeekIndex>>()
+
 export async function fetchPlaybackManifest(recordId: string): Promise<PlaybackManifest> {
 	const response = await fetch(`${BASE_PATH}/api/streams/${recordId}/playback`, {
 		cache: "no-store",
@@ -20,7 +22,7 @@ export async function fetchPlaybackManifest(recordId: string): Promise<PlaybackM
 	return playbackManifestSchema.parse(await response.json())
 }
 
-export async function fetchPlaybackFlvSeekIndex(recordId: string): Promise<PlaybackFlvSeekIndex> {
+async function requestPlaybackFlvSeekIndex(recordId: string): Promise<PlaybackFlvSeekIndex> {
 	const response = await fetch(`${BASE_PATH}/api/streams/${recordId}/playback/flv-index`, {
 		cache: "no-store",
 	})
@@ -31,6 +33,19 @@ export async function fetchPlaybackFlvSeekIndex(recordId: string): Promise<Playb
 	}
 
 	return playbackFlvSeekIndexSchema.parse(await response.json())
+}
+
+export function fetchPlaybackFlvSeekIndex(recordId: string): Promise<PlaybackFlvSeekIndex> {
+	const existingRequest = playbackFlvSeekIndexRequests.get(recordId)
+	if (existingRequest) return existingRequest
+
+	const request = requestPlaybackFlvSeekIndex(recordId).finally(() => {
+		if (playbackFlvSeekIndexRequests.get(recordId) === request) {
+			playbackFlvSeekIndexRequests.delete(recordId)
+		}
+	})
+	playbackFlvSeekIndexRequests.set(recordId, request)
+	return request
 }
 
 export function playbackManifestToMediaInfo(manifest: PlaybackManifest): MediaInfo {
