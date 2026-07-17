@@ -1,36 +1,40 @@
 import { FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/src/components/new-york/ui/form"
+import Select from "@/src/app/components/empty-select"
 import { SelectItem } from "@/src/components/new-york/ui/select"
 import React from "react"
-import { Badge } from "@/src/components/new-york/ui/badge"
-import Select from "@/src/app/components/empty-select"
+import { useFormContext } from "react-hook-form"
 import {
 	PlatformTabContent,
 	PlatformTabContentProps,
 } from "@/src/app/[locale]/(feat)/settings/platform/tabs/common-platform-tab"
-import { DouyinQuality, DouyinTabString } from "@/src/app/hooks/translations/douyin-translations"
+import { Badge } from "@/src/components/new-york/ui/badge"
+import {
+	BilibiliQualityItem,
+	BilibiliTabString,
+} from "@/src/app/[locale]/(feat)/settings/platform/bilibili-translations"
 import { CookiesFormfield } from "@/src/app/[locale]/(feat)/settings/components/form/cookies-formfield"
-import { DouyinCookieActions } from "@/src/app/[locale]/(feat)/settings/platform/components/douyin-cookie-actions"
-import { useFormContext } from "react-hook-form"
+import { BilibiliCookieActions } from "@/src/app/[locale]/(feat)/settings/platform/components/bilibili-cookie-actions"
 
-export type DouyinTabContentProps = {
-	qualityOptions: DouyinQuality[]
+type BilibiliConfigProps = {
 	allowNone?: boolean
-} & PlatformTabContentProps<DouyinTabString>
+	qualityOptions?: BilibiliQualityItem[]
+} & PlatformTabContentProps<BilibiliTabString>
 
-export const DouyinTabContent = ({
+export const BilibiliTabContent = ({
 	controlPrefix,
 	control,
 	showFetchDelay,
 	showCookies,
 	showPartedDownloadRetry,
 	showDownloadCheckInterval,
-	qualityOptions,
 	allowNone = false,
+	qualityOptions,
 	strings,
-}: DouyinTabContentProps) => {
+}: BilibiliConfigProps) => {
 	const form = useFormContext()
 	const cookieFieldName = controlPrefix ? `${controlPrefix}.cookies` : "cookies"
 	const cookieValue = form.watch(cookieFieldName) as string | null | undefined
+	const roomUrl = form.watch("url") as string | null | undefined
 
 	const setCookieValue = (value: string | null) => {
 		form.setValue(cookieFieldName, value, {
@@ -51,28 +55,30 @@ export const DouyinTabContent = ({
 				showFetchDelay={showFetchDelay}
 				showDownloadCheckInterval={showDownloadCheckInterval}
 			>
-				<FormField
-					control={control}
-					name={controlPrefix ? `${controlPrefix}.quality` : "quality"}
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>{strings.quality}</FormLabel>
-							<Select
-								onValueChange={field.onChange}
-								defaultValue={field.value}
-								placeholder={strings.qualityDefault}
-								allowNone={allowNone}
-								options={qualityOptions.map(quality => (
-									<SelectItem key={quality.quality} value={quality.quality}>
-										{quality.description}
-									</SelectItem>
-								))}
-							/>
-							<FormDescription>{strings.qualityDescription}</FormDescription>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+				{qualityOptions && (
+					<FormField
+						control={control}
+						name={controlPrefix ? `${controlPrefix}.quality` : "quality"}
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>{strings.quality}</FormLabel>
+								<Select
+									onValueChange={value => field.onChange(value == null ? null : parseInt(value, 10))}
+									defaultValue={field.value?.toString()}
+									placeholder={strings.qualityDefault}
+									options={qualityOptions.map(quality => (
+										<SelectItem key={quality.quality} value={quality.quality}>
+											{quality.description}
+										</SelectItem>
+									))}
+									allowNone
+								/>
+								<FormDescription>{strings.qualityDescription}</FormDescription>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+				)}
 
 				<FormField
 					control={control}
@@ -111,7 +117,12 @@ export const DouyinTabContent = ({
 						name={cookieFieldName}
 						control={control}
 					/>
-					<DouyinCookieActions cookie={cookieValue} onCookieChange={setCookieValue} strings={strings.cookieActions} />
+					<BilibiliCookieActions
+						cookie={cookieValue}
+						roomUrl={roomUrl}
+						onCookieChange={setCookieValue}
+						strings={strings.cookieActions}
+					/>
 				</div>
 			)}
 		</>

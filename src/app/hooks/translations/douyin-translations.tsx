@@ -3,6 +3,7 @@ import React, { useMemo } from "react"
 import { PlatformTabContentStrings } from "@/src/app/[locale]/(feat)/settings/platform/tabs/common-platform-tab"
 import { useBaseGlobalPlatformTranslations } from "@/src/app/hooks/translations/base-global-platform-translation"
 import RichText from "@/src/components/i18n/RichText"
+import type { DouyinCookieActionsStrings } from "@/src/app/[locale]/(feat)/settings/platform/components/douyin-cookie-actions"
 
 export const douyinQualityKeys = ["origin", "uhd", "hd", "sd", "ld", "md", "ao"] as const
 
@@ -18,6 +19,7 @@ export type DouyinTabString = {
 	sourceFormat: string
 	sourceFormatPlaceholder: string
 	sourceFormatDescription: string | React.ReactNode
+	cookieActions: DouyinCookieActionsStrings
 } & PlatformTabContentStrings
 
 export const useDouyinTranslations = () => {
@@ -35,6 +37,17 @@ export const useDouyinTranslations = () => {
 			qualityDescription: t("qualityDescription"),
 			qualityDefault: t("qualityDefault"),
 			cookieDescription: <RichText>{tags => t.rich("cookieDescription", tags)}</RichText>,
+			cookieActions: {
+				openLogin: t("cookieActions.openLogin"),
+				verifyCookie: t("cookieActions.verifyCookie"),
+				clearCookie: t("cookieActions.clearCookie"),
+				cookieRequired: t("cookieActions.cookieRequired"),
+				clearSuccess: t("cookieActions.clearSuccess"),
+				verifySuccess: t("cookieActions.verifySuccess"),
+				verifyFailed: t("cookieActions.verifyFailed"),
+				hasRequiredFields: t("cookieActions.hasRequiredFields"),
+				missingFields: t("cookieActions.missingFields"),
+			},
 		}),
 		[t, baseTranslations]
 	)

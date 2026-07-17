@@ -62,7 +62,7 @@ export const PlatformTabContent = ({
 									placeholder='60'
 									type={"number"}
 									step={1}
-									value={field.value}
+									value={field.value ?? ""}
 									onChange={event => {
 										if (event.target.value === "") {
 											field.onChange(null)
@@ -96,7 +96,7 @@ export const PlatformTabContent = ({
 									placeholder='10'
 									type={"number"}
 									step={1}
-									value={field.value}
+									value={field.value ?? ""}
 									onChange={event => {
 										if (event.target.value === "") {
 											field.onChange(null)
@@ -125,7 +125,7 @@ export const PlatformTabContent = ({
 									placeholder='10'
 									type={"number"}
 									step={1}
-									value={field.value}
+									value={field.value ?? ""}
 									onChange={event => {
 										if (event.target.value === "") {
 											field.onChange(null)

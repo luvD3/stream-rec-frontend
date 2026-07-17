@@ -5,6 +5,7 @@ import { douyuRegex } from "@/src/lib/data/platform/douyu/constants"
 import { twitchRegex } from "@/src/lib/data/platform/twitch/constants"
 import { pandatvRegex } from "@/src/lib/data/platform/pandatv/constants"
 import { weiboRegex } from "@/src/lib/data/platform/weibo/constants"
+import { bilibiliRegex } from "@/src/lib/data/platform/bilibili/constants"
 
 export const globalPlatformConfig = z.object({
 	cookies: z.string().nullish(),
@@ -22,6 +23,7 @@ export enum PlatformType {
 	TWITCH = "twitch",
 	PANDATV = "pandatv",
 	WEIBO = "weibo",
+	BILIBILI = "bilibili",
 	TEMPLATE = "template",
 }
 
@@ -32,4 +34,5 @@ export const platformRegexes = [
 	{ platformType: PlatformType.TWITCH, regex: twitchRegex },
 	{ platformType: PlatformType.PANDATV, regex: pandatvRegex },
 	{ platformType: PlatformType.WEIBO, regex: weiboRegex },
+	{ platformType: PlatformType.BILIBILI, regex: bilibiliRegex },
 ]

@@ -56,6 +56,7 @@ export const CookiesFormfield = React.forwardRef<CookiesFormfieldRef, CookiesFor
 								id={name ?? "cookies"}
 								placeholder='Cookies'
 								{...field}
+								value={field.value ?? ""}
 								onChange={e => {
 									const value = e.target.value
 									if (value === "") {

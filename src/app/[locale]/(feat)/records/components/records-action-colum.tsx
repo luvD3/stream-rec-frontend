@@ -13,7 +13,6 @@ import { Link, useRouter } from "@/src/i18n/routing"
 import { toast } from "sonner"
 import { StreamData } from "@/src/lib/data/streams/definitions"
 import { useTranslations } from "next-intl"
-import { usePlayerStore } from "@/src/lib/stores/player-store"
 import { BASE_PATH } from "@/src/lib/routes"
 import { encodeParams } from "@/src/lib/utils/proxy"
 import { md5 } from "@/src/lib/utils"
@@ -24,26 +23,8 @@ type RecordTableActionColumnProps = {
 	deleteStream: (id: string, deleteLocal: boolean) => Promise<void>
 }
 
-const getFileInfo = (outputFilePath: string, id: string) => {
-	const fileName = outputFilePath.split(/[/\\]/).pop() || `${id}.mp4`
-	const format = fileName.split(".").pop()
-	const hashedFileName = md5(outputFilePath) + "." + format
-	return { fileName, format, hashedFileName }
-}
-
-const verifyFileExists = async (id: string, fileName: string) => {
-	const exists = await checkFileExists(id, fileName)
-	if (!exists) {
-		toast.error("File does not exist")
-		return false
-	}
-	return true
-}
-
 export function RecordTableActionColumn({ data, deleteStream }: RecordTableActionColumnProps) {
 	const router = useRouter()
-	const setSource = usePlayerStore(state => state.setSource)
-	const setMediaInfo = usePlayerStore(state => state.setMediaInfo)
 
 	const t = useTranslations("Actions")
 	const u = useTranslations("RecordsPage")
@@ -63,33 +44,7 @@ export function RecordTableActionColumn({ data, deleteStream }: RecordTableActio
 	}
 
 	const handleWatch = async () => {
-		const { format, hashedFileName } = getFileInfo(data.outputFilePath, data.id.toString())
-		if (!(await verifyFileExists(data.id.toString(), hashedFileName))) return
-
-		setSource({
-			type: "server-file",
-			recordId: data.id.toString(),
-			url: `/files/${data.id}/`,
-		})
-
-		setMediaInfo(
-			{
-				site: "local",
-				title: data.title,
-				artist: data.streamerName,
-				live: false,
-				streams: [
-					{
-						url: `/files/${data.id}/${hashedFileName}`,
-						format: format || "mp4",
-						quality: "",
-						bitrate: 0,
-					},
-				],
-			},
-			{}
-		)
-		router.push("/player")
+		router.push(`/player?recordId=${data.id}`)
 	}
 
 	const buildProxyUrl = (url: string) => {
